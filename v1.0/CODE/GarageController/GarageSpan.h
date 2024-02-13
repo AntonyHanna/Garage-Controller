@@ -1,10 +1,10 @@
-#ifndef GarageSpan_H
-#define GarageSpan_H
+#ifndef GARAGE_SPAN_H
+#define GARAGE_SPAN_H
 
 #include "HomeSpan.h"
 #include "Config.h"
 
-struct GarageSpan : Service::GarageDoorOpener  {
+class GarageSpan : Service::GarageDoorOpener  {
 private:
   // Minimum viable characteristics
   SpanCharacteristic *currentDoorState;
@@ -12,7 +12,11 @@ private:
   SpanCharacteristic *obstructionDetected;
 
 public:
-  GarageSpan() : Service::GarageDoorOpener () {
+  GarageSpan() : Service::GarageDoorOpener() {
+    this->currentDoorState = new Characteristic::CurrentDoorState();
+    this->targetDoorState = new Characteristic::TargetDoorState();
+    this->obstructionDetected = new Characteristic::ObstructionDetected();
+
     pinMode(OPEN_LIMIT, INPUT);
     pinMode(CLOSE_LIMIT, INPUT);
     pinMode(OSC, OUTPUT);
@@ -20,12 +24,20 @@ public:
     pinMode(STATUS_LED, OUTPUT);
   }
 
-  void begin() {
-    homeSpan.enableOTA();
-    homeSpan.begin(Category::GarageDoorOpeners, "Garage Door", "GarageDoorOpener");
+  boolean update() {
+    // Trigger door
+    if (targetDoorState->updated()) {
+      digitalWrite(STATUS_LED, HIGH);
+      digitalWrite(OSC, HIGH);
+      delay(100);
+      digitalWrite(OSC, LOW);
+      digitalWrite(STATUS_LED, LOW);
+    }
+
+    return true;
   }
 
-  boolean update() {
+  void loop() {
     // Monitor OPEN / CLOSE statuses
     if (digitalRead(OPEN_LIMIT) == HIGH) {
       Serial.println("OPEN_LIMIT triggered");
@@ -42,15 +54,7 @@ public:
       this->currentDoorState->setVal(0);
     }
 
-    // Trigger door
-    if (targetDoorState->updated()) {
-      digitalWrite(STATUS_LED, HIGH);
-      digitalWrite(OSC, HIGH);
-      delay(100);
-      digitalWrite(OSC, LOW);
-      digitalWrite(STATUS_LED, LOW);
-    }
+    delay(250);
   }
 };
-
 #endif
