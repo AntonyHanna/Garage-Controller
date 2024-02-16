@@ -11,6 +11,15 @@ private:
   SpanCharacteristic *targetDoorState;
   SpanCharacteristic *obstructionDetected;
 
+  void pulse_LED(uint8_t pin, int pulses = 1, int cycle_time = 250) {
+    for(int i = 0; i < pulses; i++) {
+      digitalWrite(pin, HIGH);
+      delay(cycle_time / 2);
+      digitalWrite(pin, LOW);
+      delay(cycle_time / 2);
+    }    
+  }
+
 public:
   GarageSpan() : Service::GarageDoorOpener() {
     this->currentDoorState = new Characteristic::CurrentDoorState();
@@ -22,16 +31,17 @@ public:
     pinMode(OSC, OUTPUT);
 
     pinMode(STATUS_LED, OUTPUT);
+
+    pulse_LED(STATUS_LED, 5);
+
   }
 
   boolean update() {
     // Trigger door
     if (targetDoorState->updated()) {
-      digitalWrite(STATUS_LED, HIGH);
       digitalWrite(OSC, HIGH);
-      delay(100);
       digitalWrite(OSC, LOW);
-      digitalWrite(STATUS_LED, LOW);
+      pulse_LED(STATUS_LED);
     }
 
     return true;
@@ -41,20 +51,17 @@ public:
     // Monitor OPEN / CLOSE statuses
     if (digitalRead(OPEN_LIMIT) == HIGH) {
       Serial.println("OPEN_LIMIT triggered");
-      this->currentDoorState->setVal(0);
+      //this->currentDoorState->setVal(0);
     }
 
     else if (digitalRead(CLOSE_LIMIT) == HIGH) {
       Serial.println("CLOSE_LIMIT triggered");
-      this->currentDoorState->setVal(1);
+      //this->currentDoorState->setVal(1);
     }
 
     else {
-      Serial.println("Neither door state is active, defaulting to door OPEN for safety.");
       this->currentDoorState->setVal(0);
     }
-
-    delay(250);
   }
 };
 #endif
